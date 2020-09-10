@@ -12,6 +12,13 @@ library
                , frontend
                , obelisk-backend
                , obelisk-route
+               , persistent
+               , persistent-postgresql
+               , persistent-sqlite
+               , persistent-template
+               , scalpel
+               , bytestring
+               , aeson
   exposed-modules:
     Backend
   ghc-options: -Wall
@@ -21,8 +28,16 @@ executable backend
   hs-source-dirs: src-bin
   if impl(ghcjs)
     buildable: False
+  extra-libraries: hindent
   build-depends: base
                , backend
                , common
                , frontend
                , obelisk-backend
+               , persistent
+               , persistent-postgresql
+               , persistent-sqlite
+               , persistent-template
+               , scalpel
+               , bytestring
+               , aeson
