@@ -29,6 +29,7 @@ share
   [persistLowerCase|
 StatePark
   name String
+  link String
   hasReservation Bool
   deriving Show
 |]
@@ -47,7 +48,7 @@ connStr = "host=localhost dbname=test user=test password=test port=5432"
 
 runDb :: IO ()
 runDb = do
-  stateParks <- produceStateParks
+  stateParks <- getStateParks
   runStderrLoggingT $
     withPostgresqlPool connStr 10 $ \pool ->
       liftIO $ do
@@ -55,30 +56,34 @@ runDb = do
           runMigration migrateAll
           insertMany_ stateParks
 
-produceStateParks :: IO [StatePark]
-produceStateParks = do
+getStateParks :: IO [StatePark]
+getStateParks = do
   scrapedFromURL <- scrapeURL stateParksURL stateParksScraper
   return $
-    Prelude.map scrapedMapConverter (Prelude.concat $ fromJust scrapedFromURL)
-    -- TODO: sub out link and hasReservation in favor of actual values
+    -- TODO: sub hasReservation in favor of actual values
+    Prelude.map scrapedMapConverter (fromJust scrapedFromURL)
   where
-    scrapedMapConverter (ScrapedStatePark n "" True) = StatePark (unpack n) True
+    scrapedMapConverter (ScrapedStatePark n l True) = StatePark (unpack n) (unpack l) True
 
 -- URLs
 stateParksURL :: String
 stateParksURL = "https://www.parks.ca.gov/?page_id=21805"
 
 -- Scrapers
-stateParksScraper :: Scraper String [[ScrapedStatePark]]
-stateParksScraper = chroots ("ul" @: [hasClass "results-area"]) stateParkScraper
+stateParksScraper :: Scraper String [ScrapedStatePark]
+stateParksScraper = chroot ("div" @: ["id" @= "center_content"]) (chroots ("li") (stateParkScraper))
 
-stateParkScraper :: Scraper String [ScrapedStatePark]
+stateParkScraper :: Scraper String ScrapedStatePark
 stateParkScraper = do
-  names <- texts $ "a"
-  -- array of strings to array of stateparks
-  return $ Prelude.map (\r -> makeStatePark r) (Prelude.map pack names)
-  where
-    makeStatePark n = ScrapedStatePark n
+  name <- text $ "a"
+  link <- attr "href" $ "a"
+  return $ ScrapedStatePark (pack name) (pack link) True
+
+-- stateParkScraper' :: Scraper String ScrapedStatePark
+-- stateParkScraper' = do
+--   name <- text $ "a"
+--   link <- attr "href"
+--   return $ ScrapedStatePark name link True
 
 -- Set Custom User Agent for HTTPS to work
 managerSettings :: HTTP.ManagerSettings
