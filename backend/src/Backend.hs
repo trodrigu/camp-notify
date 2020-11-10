@@ -22,14 +22,17 @@ import qualified Network.HTTP.Client.TLS as HTTP
 import qualified Network.HTTP.Types.Header as HTTP
 import Obelisk.Backend
 import Text.HTML.Scalpel
+import Control.Concurrent.Thread.Delay
 
 -- Database Persistence
 share
   [mkPersist sqlSettings, mkMigrate "migrateAll"]
   [persistLowerCase|
 StatePark
-  name String
-  link String
+  name Text
+  nameSlug Text
+  Primary nameSlug
+  link Text
   hasReservation Bool
   deriving Show
 |]
@@ -49,27 +52,34 @@ connStr = "host=localhost dbname=test user=test password=test port=5432"
 runDb :: IO ()
 runDb = do
   stateParks <- getStateParks
+  -- updatedStateParksWithReservation <- updateStateParksWithReservation
   runStderrLoggingT $
     withPostgresqlPool connStr 10 $ \pool ->
       liftIO $ do
         flip runSqlPersistMPool pool $ do
           runMigration migrateAll
-          insertMany_ stateParks
+          repsertMany stateParks
 
-getStateParks :: IO [StatePark]
+getStateParks :: IO [(Key StatePark, StatePark)]
 getStateParks = do
   scrapedFromURL <- scrapeURL stateParksURL stateParksScraper
-  return $
-    -- TODO: sub hasReservation in favor of actual values
-    Prelude.map scrapedMapConverter (fromJust scrapedFromURL)
-  where
-    scrapedMapConverter (ScrapedStatePark n l True) = StatePark (unpack n) (unpack l) True
+  sequence (Prelude.map (\r -> getReservationStatus r) (fromJust scrapedFromURL))
+
+getReservationStatus :: ScrapedStatePark -> IO (Key StatePark, StatePark)
+getReservationStatus (ScrapedStatePark n l _hasReservation) = do
+  linksOnPage <- scrapeURL (unpack l) reservationStatusScraper
+  return $ (StateParkKey (slugify n) , StatePark (n) (slugify n) (l) (Prelude.elem ("http://www.reservecalifornia.com/" :: Text) (fromJust linksOnPage)))
+
 
 -- URLs
 stateParksURL :: String
 stateParksURL = "https://www.parks.ca.gov/?page_id=21805"
 
 -- Scrapers
+reservationStatusScraper :: Scraper Text [Text]
+reservationStatusScraper =
+  attrs "href" "a"
+
 stateParksScraper :: Scraper String [ScrapedStatePark]
 stateParksScraper = chroot ("div" @: ["id" @= "center_content"]) (chroots ("li") (stateParkScraper))
 
@@ -77,13 +87,8 @@ stateParkScraper :: Scraper String ScrapedStatePark
 stateParkScraper = do
   name <- text $ "a"
   link <- attr "href" $ "a"
-  return $ ScrapedStatePark (pack name) (pack link) True
+  return $ ScrapedStatePark (pack name) (pack link) False
 
--- stateParkScraper' :: Scraper String ScrapedStatePark
--- stateParkScraper' = do
---   name <- text $ "a"
---   link <- attr "href"
---   return $ ScrapedStatePark name link True
 
 -- Set Custom User Agent for HTTPS to work
 managerSettings :: HTTP.ManagerSettings
@@ -108,3 +113,10 @@ backend =
           return ()
     , _backend_routeEncoder = fullRouteEncoder
     }
+
+slugify :: Text -> Text
+slugify s =
+  let repl ' ' = '-'
+      repl c = c
+  in
+    toLower $ (Data.Text.map repl (s))

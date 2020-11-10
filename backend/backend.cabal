@@ -41,3 +41,4 @@ executable backend
                , scalpel
                , bytestring
                , aeson
+               , concurrent-extra
