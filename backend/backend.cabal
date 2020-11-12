@@ -42,3 +42,4 @@ executable backend
                , bytestring
                , aeson
                , concurrent-extra
+               , time

@@ -23,6 +23,7 @@ import qualified Network.HTTP.Types.Header as HTTP
 import Obelisk.Backend
 import Text.HTML.Scalpel
 import Control.Concurrent.Thread.Delay
+import Data.Time.Clock
 
 -- Database Persistence
 share
@@ -34,6 +35,7 @@ StatePark
   Primary nameSlug
   link Text
   hasReservation Bool
+  lastSync UTCTime
   deriving Show
 |]
 
@@ -68,7 +70,8 @@ getStateParks = do
 getReservationStatus :: ScrapedStatePark -> IO (Key StatePark, StatePark)
 getReservationStatus (ScrapedStatePark n l _hasReservation) = do
   linksOnPage <- scrapeURL (unpack l) reservationStatusScraper
-  return $ (StateParkKey (slugify n) , StatePark (n) (slugify n) (l) (Prelude.elem ("http://www.reservecalifornia.com/" :: Text) (fromJust linksOnPage)))
+  time <- getCurrentTime
+  return $ (StateParkKey (slugify n) , StatePark (n) (slugify n) (l) (Prelude.elem ("http://www.reservecalifornia.com/" :: Text) (fromJust linksOnPage)) time)
 
 
 -- URLs
