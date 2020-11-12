@@ -26,6 +26,7 @@ library
 executable backend
   main-is: main.hs
   hs-source-dirs: src-bin
+  ghc-options: -threaded
   if impl(ghcjs)
     buildable: False
   extra-libraries: hindent
@@ -43,3 +44,4 @@ executable backend
                , aeson
                , concurrent-extra
                , time
+               , parallel-io

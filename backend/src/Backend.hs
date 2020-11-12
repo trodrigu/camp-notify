@@ -24,6 +24,7 @@ import Obelisk.Backend
 import Text.HTML.Scalpel
 import Control.Concurrent.Thread.Delay
 import Data.Time.Clock
+import Control.Concurrent.ParallelIO
 
 -- Database Persistence
 share
@@ -61,14 +62,15 @@ runDb = do
         flip runSqlPersistMPool pool $ do
           runMigration migrateAll
           repsertMany stateParks
+  >> stopGlobalPool
 
 getStateParks :: IO [(Key StatePark, StatePark)]
 getStateParks = do
   scrapedFromURL <- scrapeURL stateParksURL stateParksScraper
-  sequence (Prelude.map (\r -> getReservationStatus r) (fromJust scrapedFromURL))
+  parallel (Prelude.map (\r -> getReservationStatus r) (Prelude.take 10 $ fromJust scrapedFromURL))
 
 getReservationStatus :: ScrapedStatePark -> IO (Key StatePark, StatePark)
-getReservationStatus (ScrapedStatePark n l _hasReservation) = do
+getReservationStatus (ScrapedStatePark n l False) = do
   linksOnPage <- scrapeURL (unpack l) reservationStatusScraper
   time <- getCurrentTime
   return $ (StateParkKey (slugify n) , StatePark (n) (slugify n) (l) (Prelude.elem ("http://www.reservecalifornia.com/" :: Text) (fromJust linksOnPage)) time)
@@ -92,6 +94,11 @@ stateParkScraper = do
   link <- attr "href" $ "a"
   return $ ScrapedStatePark (pack name) (pack link) False
 
+-- stateParkScraper' :: Scraper String ScrapedStatePark
+-- stateParkScraper' = do
+--   name <- text $ "a"
+--   link <- attr "href"
+--   return $ ScrapedStatePark name link False
 
 -- Set Custom User Agent for HTTPS to work
 managerSettings :: HTTP.ManagerSettings
