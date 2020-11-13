@@ -1,17 +1,19 @@
-{ obelisk ? import ./.obelisk/impl {
-    system = builtins.currentSystem;
-    iosSdkVersion = "10.2";
-    # You must accept the Android Software Development Kit License Agreement at
-    # https://developer.android.com/studio/terms in order to build Android apps.
-    # Uncomment and set this to `true` to indicate your acceptance:
-    # config.android_sdk.accept_license = false;
-  }
+{ mkDerivation, aeson, base, bytestring, concurrent-extra
+, http-client, http-client-tls, http-types, monad-logger, mtl
+, parallel-io, persistent, persistent-postgresql
+, persistent-template, scalpel, stdenv, text, time
 }:
-with obelisk;
-project ./. ({ ... }: {
-  android.applicationId = "systems.obsidian.obelisk.examples.minimal";
-  android.displayName = "Obelisk Minimal Example";
-  ios.bundleIdentifier = "systems.obsidian.obelisk.examples.minimal";
-  ios.bundleName = "Obelisk Minimal Example";
-  __withGhcide = true;
-})
+mkDerivation {
+  pname = "camp-notify";
+  version = "0.1.0.0";
+  src = ./.;
+  isLibrary = false;
+  isExecutable = true;
+  executableHaskellDepends = [
+    aeson base bytestring concurrent-extra http-client http-client-tls
+    http-types monad-logger mtl parallel-io persistent
+    persistent-postgresql persistent-template scalpel text time
+  ];
+  license = "unknown";
+  hydraPlatforms = stdenv.lib.platforms.none;
+}

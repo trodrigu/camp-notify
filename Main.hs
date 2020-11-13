@@ -6,10 +6,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE EmptyDataDecls #-}
 
-module Backend where
+module Main where
 
-import Common.Route
 import Control.Monad.Logger (runStderrLoggingT)
 import Control.Monad.Reader
 import Data.Maybe
@@ -20,9 +23,7 @@ import Database.Persist.TH
 import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as HTTP
 import qualified Network.HTTP.Types.Header as HTTP
-import Obelisk.Backend
 import Text.HTML.Scalpel
-import Control.Concurrent.Thread.Delay
 import Data.Time.Clock
 import Control.Concurrent.ParallelIO
 
@@ -67,7 +68,7 @@ runDb = do
 getStateParks :: IO [(Key StatePark, StatePark)]
 getStateParks = do
   scrapedFromURL <- scrapeURL stateParksURL stateParksScraper
-  parallel (Prelude.map (\r -> getReservationStatus r) (Prelude.take 10 $ fromJust scrapedFromURL))
+  parallel (Prelude.map (\r -> getReservationStatus r) (Prelude.take 40 $ fromJust scrapedFromURL))
 
 getReservationStatus :: ScrapedStatePark -> IO (Key StatePark, StatePark)
 getReservationStatus (ScrapedStatePark n l False) = do
@@ -114,19 +115,13 @@ managerSettings =
               }
     }
 
-backend :: Backend BackendRoute FrontendRoute
-backend =
-  Backend
-    { _backend_run =
-        \serve -> do
-          runDb
-          return ()
-    , _backend_routeEncoder = fullRouteEncoder
-    }
-
 slugify :: Text -> Text
 slugify s =
   let repl ' ' = '-'
       repl c = c
   in
     toLower $ (Data.Text.map repl (s))
+
+main :: IO ()
+main = putStrLn "Hello, Haskell!"
+  >> runDb
