@@ -1,0 +1,8 @@
+cradle:
+  multi:
+    - path: .
+      config:
+        cradle:
+          cabal:
+            component: camp-notify
+

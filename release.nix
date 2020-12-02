@@ -1,4 +1,7 @@
+{
+}:
 let
   pkgs = import <nixpkgs> { };
 in
-  pkgs.haskellPackages.callPackage ./default.nix { }
+  { project1 = pkgs.haskellPackages.callPackage ./default.nix { };
+  }
