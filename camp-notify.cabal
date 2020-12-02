@@ -4,7 +4,7 @@ cabal-version:       >=1.10
 -- http://haskell.org/cabal/users-guide/
 
 name:                camp-notify
-version:             0.1.0.0
+version:             0.1.0.1
 -- synopsis:
 -- description:
 -- bug-reports:
@@ -23,10 +23,8 @@ executable camp-notify
   -- other-extensions:
   build-depends:       base >=4.13 && <4.14
   -- hs-source-dirs:
-  --default-language:    Haskell2010
+  default-language:    Haskell2010
   ghc-options: -threaded
-  if impl(ghcjs)
-    buildable: False
   build-depends: base
                , persistent
                , persistent-postgresql
@@ -34,7 +32,6 @@ executable camp-notify
                , scalpel
                , bytestring
                , aeson
-               , concurrent-extra
                , time
                , parallel-io
                , http-client
@@ -43,3 +40,5 @@ executable camp-notify
                , monad-logger
                , mtl
                , text
+               , containers
+               , random
