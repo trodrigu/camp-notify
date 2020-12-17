@@ -1,2 +1,2 @@
 # Camp notify
-Aggregates scraped data for planning purposes
+Aggregates scraped California state camp site data for planning purposes
